@@ -1,0 +1,877 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>i4 Rittenlog</title>
+<link rel="apple-touch-icon" href="icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Overpass:wght@400;600;800&family=Overpass+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{
+  color-scheme:light;
+  --bg:#EEF1F0; --surface:#FFFFFF; --sunk:#E3E8E7; --ink:#16212B; --muted:#56646F; --line:#CFD7DA;
+  --plate:#F2C200; --plate-ink:#141414; --biz:#2A5FC4; --biz-soft:#DCE6F7; --priv:#B9480F; --priv-soft:#F6E3D8;
+  --good:#23794A; --good-soft:#DDF0E4; --warn:#A35A06; --warn-soft:#FBEBD2;
+  --display:"Overpass","Arial Narrow",Arial,sans-serif; --body:"IBM Plex Sans","Segoe UI",system-ui,sans-serif; --mono:"Overpass Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  color-scheme:dark; --bg:#0E151B; --surface:#16212A; --sunk:#1C2934; --ink:#E6ECEF; --muted:#94A3AD; --line:#2B3A45;
+  --biz:#79A2EE; --biz-soft:#1E2E4A; --priv:#F0915A; --priv-soft:#3A2518; --good:#5CC48A; --good-soft:#15301F; --warn:#E3A24A; --warn-soft:#3A2A12;}}
+:root[data-theme="dark"]{
+  color-scheme:dark; --bg:#0E151B; --surface:#16212A; --sunk:#1C2934; --ink:#E6ECEF; --muted:#94A3AD; --line:#2B3A45;
+  --biz:#79A2EE; --biz-soft:#1E2E4A; --priv:#F0915A; --priv-soft:#3A2518; --good:#5CC48A; --good-soft:#15301F; --warn:#E3A24A; --warn-soft:#3A2A12;}
+*{box-sizing:border-box}
+html{padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 var(--body);padding-inline:16px;padding-block:0 calc(40px + env(safe-area-inset-bottom,0px))}
+h1,h2,h3{font-family:var(--display);line-height:1.15;margin:0;text-wrap:balance}
+h2{font-size:22px;font-weight:800}
+h3{font-size:16px;font-weight:600}
+p{margin:0}
+.wrap{max-width:760px;margin:0 auto;display:grid;gap:18px}
+.muted{color:var(--muted)}
+.small{font-size:13px}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+:focus-visible{outline:3px solid var(--plate);outline-offset:2px}
+[hidden]{display:none!important}
+.sync{font:500 11.5px var(--body);color:var(--muted)}
+.sync.cloud{color:var(--good)}
+.sync.error,.sync.full{color:var(--priv)}
+
+header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:10;background:var(--bg);margin-inline:-16px;padding:10px 16px 0;border-bottom:1px solid var(--line)}
+.top .row1{max-width:760px;margin:0 auto;display:flex;justify-content:space-between;align-items:center;gap:10px}
+.brand{display:flex;gap:10px;align-items:center;font:800 17px var(--display)}
+.plate{display:inline-flex;border-radius:4px;overflow:hidden;border:1.5px solid var(--plate-ink);font:600 13px/1 var(--mono);background:var(--plate);color:var(--plate-ink)}
+.plate b{background:#1F3F99;color:#fff;font:600 9px/1 var(--display);padding:4px;display:flex;align-items:flex-end}
+.plate span{padding:5px 7px 4px}
+.lang{display:inline-flex;border:1px solid var(--line);border-radius:999px;padding:3px;background:var(--surface)}
+.lang button{border:0;background:none;color:var(--muted);font:600 13px var(--display);padding:5px 11px;border-radius:999px;cursor:pointer}
+.lang button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+nav.tabs{max-width:760px;margin:8px auto 0;display:flex;gap:4px;overflow-x:auto;scrollbar-width:none}
+nav.tabs button{flex:0 0 auto;border:0;background:none;color:var(--muted);font:600 14px var(--display);padding:10px 12px;border-bottom:3px solid transparent;cursor:pointer}
+nav.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--plate)}
+
+main{padding-top:18px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;display:grid;gap:14px}
+.banner{border-radius:10px;padding:12px 14px;font-size:14px;display:grid;gap:8px}
+.banner.info{background:var(--biz-soft);color:var(--ink)}
+.banner.warn{background:var(--warn-soft);color:var(--ink)}
+.banner.ok{background:var(--good-soft);color:var(--ink)}
+.flash{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:12px 18px;border-radius:10px;font-weight:500;z-index:50;max-width:calc(100% - 32px);box-shadow:0 8px 24px rgba(0,0,0,.2)}
+
+.btn{font:600 15px var(--display);border:1px solid var(--ink);background:var(--ink);color:var(--bg);padding:11px 16px;border-radius:10px;cursor:pointer;min-height:44px}
+.btn.ghost{background:transparent;color:var(--ink)}
+.btn.small{font-size:13px;padding:7px 11px;min-height:34px}
+.btn.danger{background:var(--priv);border-color:var(--priv);color:#fff}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.big{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.big .btn{min-height:84px;font-size:18px;border-radius:14px;display:grid;place-items:center;gap:2px}
+.big .btn small{font:500 12px var(--body);opacity:.8}
+.btn.biz{background:var(--biz);border-color:var(--biz);color:#fff}
+.btn.priv{background:var(--priv);border-color:var(--priv);color:#fff}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.spread{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
+
+.field{display:grid;gap:4px}
+.field label,.lbl{font:600 11.5px var(--display);letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+input,select,textarea{font:inherit;font-size:16px;padding:10px 11px;border:1px solid var(--line);border-radius:9px;background:var(--bg);color:var(--ink);width:100%;min-width:0}
+textarea{min-height:120px;font:12px var(--mono)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+
+.active{border:2px solid var(--plate)}
+.live{display:inline-flex;align-items:center;gap:7px;font:600 12px var(--display);letter-spacing:.07em;text-transform:uppercase}
+.live i{width:9px;height:9px;border-radius:50%;background:var(--good);animation:pulse 1.6s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.3}}
+@media (prefers-reduced-motion:reduce){.live i{animation:none}}
+
+.pill{display:inline-block;font:600 11px/1 var(--display);letter-spacing:.04em;text-transform:uppercase;padding:4px 7px;border-radius:999px;white-space:nowrap}
+.pill.biz{background:var(--biz-soft);color:var(--biz)}
+.pill.priv{background:var(--priv-soft);color:var(--priv)}
+.pill.home{background:var(--sunk);color:var(--ink)}
+.pill.cm{background:color-mix(in srgb,var(--plate) 35%,transparent);color:var(--ink)}
+.pill.todo{background:var(--warn-soft);color:var(--warn)}
+.pill.ed{background:var(--sunk);color:var(--muted)}
+
+.trips{display:grid}
+.trip{display:grid;grid-template-columns:52px 1fr auto;gap:2px 12px;padding:12px 0;border-top:1px solid var(--line);cursor:pointer;background:none;border-left:0;border-right:0;border-bottom:0;text-align:left;color:inherit;font:inherit;width:100%}
+.trip:first-child{border-top:0}
+.trip .tm{font:600 12.5px var(--mono);color:var(--muted);padding-top:2px}
+.trip .rt{font-weight:600;overflow-wrap:anywhere}
+.trip .km{font:600 15px var(--mono);text-align:right}
+.trip .sub{grid-column:2/4;display:flex;flex-wrap:wrap;gap:6px;align-items:center;color:var(--muted);font-size:12.5px}
+.trip .ad{grid-column:2/4;color:var(--muted);font-size:12.5px;overflow-wrap:anywhere}
+.dayhead{font:800 14px var(--display);padding:14px 0 4px;display:flex;justify-content:space-between;border-bottom:2px solid var(--ink)}
+
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px;display:grid;gap:2px}
+.stat .n{font:800 22px/1.1 var(--display);font-variant-numeric:tabular-nums}
+.stat .l{font-size:12px;color:var(--muted)}
+.meter{height:12px;border-radius:6px;background:var(--sunk);overflow:hidden;position:relative}
+.meter i{position:absolute;inset:0 auto 0 0;background:var(--priv);border-radius:6px}
+.meter.over i{background:var(--warn)}
+
+.place{display:grid;grid-template-columns:36px 1fr auto;gap:10px;align-items:center;padding:10px 0;border-top:1px solid var(--line)}
+.place:first-child{border-top:0}
+.place .nm{font-weight:600;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.place .ad{color:var(--muted);font-size:13px;overflow-wrap:anywhere}
+.ring{fill:color-mix(in srgb,var(--biz) 14%,transparent);stroke:var(--biz);stroke-width:1.2}
+.ring.home{fill:var(--sunk);stroke:var(--ink)}
+.ring.priv{fill:var(--priv-soft);stroke:var(--priv)}
+.pin{fill:var(--ink)}
+
+.sc{display:grid;gap:8px;padding:12px 0;border-top:1px solid var(--line)}
+.sc:first-child{border-top:0}
+.sc code{font:12.5px var(--mono);background:var(--sunk);padding:8px 10px;border-radius:8px;display:block;overflow-wrap:anywhere}
+ol.steps{margin:0;padding-left:20px;display:grid;gap:6px}
+
+dialog{border:1px solid var(--line);border-radius:14px;padding:0;background:var(--surface);color:var(--ink);width:min(560px,calc(100% - 24px));max-height:calc(100% - 24px)}
+dialog::backdrop{background:rgba(10,16,22,.5)}
+dialog form{padding:18px;display:grid;gap:12px}
+
+.print{display:none}
+@media print{
+  body{background:#fff;color:#000;padding:0}
+  header.top,main,.flash,dialog{display:none!important}
+  .print{display:block;font:10pt var(--body)}
+  .print table{border-collapse:collapse;width:100%}
+  .print th,.print td{border:1px solid #999;padding:3px 5px;text-align:left;vertical-align:top}
+  .print td.n{text-align:right;font-variant-numeric:tabular-nums}
+}
+@media (max-width:560px){
+  .stats{grid-template-columns:1fr 1fr}
+  .grid3{grid-template-columns:1fr 1fr}
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="row1">
+    <div class="brand"><span class="plate"><b>NL</b><span id="hdrPlate">BMW i4</span></span><span style="display:grid;line-height:1.1"><span data-t="appName"></span><span id="syncState" class="sync local"></span></span></div>
+    <div class="lang" role="group" aria-label="Taal / Language">
+      <button type="button" id="lNL" data-l="nl" aria-pressed="false">NL</button>
+      <button type="button" id="lEN" data-l="en" aria-pressed="false">EN</button>
+    </div>
+  </div>
+  <nav class="tabs" role="tablist">
+    <button role="tab" data-tab="today" data-t="tabToday"></button>
+    <button role="tab" data-tab="log" data-t="tabLog"></button>
+    <button role="tab" data-tab="places" data-t="tabPlaces"></button>
+    <button role="tab" data-tab="export" data-t="tabExport"></button>
+    <button role="tab" data-tab="settings" data-t="tabSettings"></button>
+    <button role="tab" data-tab="help" data-t="tabHelp"></button>
+  </nav>
+</header>
+
+<main class="wrap">
+  <!-- TODAY -->
+  <section data-view="today" class="wrap" style="padding:0">
+    <div id="notices" class="wrap" style="padding:0;gap:10px"></div>
+    <div id="activeBox"></div>
+    <div class="panel">
+      <div class="spread"><h2 id="todayTitle"></h2><span class="mono muted small" id="todayKm"></span></div>
+      <div class="trips" id="todayTrips"></div>
+      <div class="row"><button class="btn ghost small" type="button" id="addManual" data-t="addManual"></button></div>
+    </div>
+  </section>
+
+  <!-- LOG -->
+  <section data-view="log" class="wrap" style="padding:0" hidden>
+    <div class="stats" id="stats"></div>
+    <div class="panel" id="meterBox"></div>
+    <div id="gapBox" class="wrap" style="padding:0;gap:10px"></div>
+    <div class="panel">
+      <div class="spread"><h2 data-t="allTrips"></h2>
+        <select id="monthSel" style="width:auto" aria-label="Maand"></select></div>
+      <div class="trips" id="logTrips"></div>
+      <div class="row"><button class="btn ghost small" type="button" id="addManual2" data-t="addManual"></button></div>
+    </div>
+  </section>
+
+  <!-- PLACES -->
+  <section data-view="places" class="wrap" style="padding:0" hidden>
+    <div class="panel">
+      <h2 data-t="placesTitle"></h2>
+      <p class="muted small" data-t="placesLead"></p>
+      <div id="placeList"></div>
+    </div>
+    <form class="panel" id="placeForm" novalidate>
+      <h3 id="placeFormTitle"></h3>
+      <input type="hidden" id="plId">
+      <div class="field"><label for="plName" data-t="name"></label><input id="plName" type="text" autocomplete="off" data-tp="phName"></div>
+      <div class="field"><label for="plAddr" data-t="fullAddress"></label><input id="plAddr" type="text" autocomplete="street-address" data-tp="phAddr"></div>
+      <div class="row">
+        <button class="btn ghost small" type="button" id="plLookup" data-t="lookup"></button>
+        <button class="btn ghost small" type="button" id="plHere" data-t="useHere"></button>
+        <span class="small muted" id="plCoords"></span>
+      </div>
+      <div class="grid2">
+        <div class="field"><label for="plCat" data-t="category"></label>
+          <select id="plCat"><option value="biz"></option><option value="home"></option><option value="priv"></option></select></div>
+        <div class="field"><label for="plRad" data-t="radius"></label>
+          <select id="plRad"><option value="100">100 m</option><option value="250" selected>250 m</option><option value="500">500 m</option><option value="1000">1 km</option></select></div>
+      </div>
+      <p class="small" id="plMsg" style="color:var(--priv);min-height:1.2em"></p>
+      <div class="row"><button class="btn" type="submit" data-t="savePlace"></button><button class="btn ghost" type="button" id="plCancel" data-t="cancel" hidden></button></div>
+    </form>
+  </section>
+
+  <!-- EXPORT -->
+  <section data-view="export" class="wrap" style="padding:0" hidden>
+    <div class="panel">
+      <h2 data-t="exportTitle"></h2>
+      <p class="muted small" data-t="exportLead"></p>
+      <div class="field"><label for="expPeriod" data-t="period"></label><select id="expPeriod"></select></div>
+      <div class="row">
+        <button class="btn" type="button" id="expXlsx">Excel (.xlsx)</button>
+        <button class="btn ghost" type="button" id="expCsv">CSV</button>
+        <button class="btn ghost" type="button" id="expPrint" data-t="printPdf"></button>
+      </div>
+      <p class="small muted" id="expNote"></p>
+      <textarea id="expOut" hidden readonly aria-label="CSV"></textarea>
+    </div>
+    <div class="panel">
+      <h3 data-t="backupTitle"></h3>
+      <p class="muted small" data-t="backupLead"></p>
+      <p class="small" id="lastBackup"></p>
+      <div class="row">
+        <button class="btn" type="button" id="bkSave" data-t="backupSave"></button>
+        <label class="btn ghost" for="bkFile" style="display:inline-grid;place-items:center" data-t="backupRestore"></label>
+        <input type="file" id="bkFile" accept="application/json,.json" hidden>
+      </div>
+      <p class="small" id="bkMsg"></p>
+    </div>
+  </section>
+
+  <!-- SETTINGS -->
+  <section data-view="settings" class="wrap" style="padding:0" hidden>
+    <form class="panel" id="setForm" novalidate>
+      <h2 data-t="vehicle"></h2>
+      <div class="grid3">
+        <div class="field"><label for="sMake" data-t="make"></label><input id="sMake" type="text"></div>
+        <div class="field"><label for="sModel" data-t="model"></label><input id="sModel" type="text"></div>
+        <div class="field"><label for="sPlate" data-t="plate"></label><input id="sPlate" type="text" autocapitalize="characters" placeholder="XX-123-X"></div>
+      </div>
+      <div class="grid2">
+        <div class="field"><label for="sFrom" data-t="availFrom"></label><input id="sFrom" type="date"></div>
+        <div class="field"><label for="sOdo" data-t="openingOdo"></label><input id="sOdo" type="number" inputmode="numeric" min="0"></div>
+      </div>
+      <p class="small muted" data-t="openingOdoHelp"></p>
+      <div class="field"><label for="sDef" data-t="defTypeLbl"></label>
+        <select id="sDef"><option value="biz"></option><option value="priv"></option><option value="ask"></option></select></div>
+      <p class="small muted" data-t="defTypeHelp"></p>
+      <div class="row"><button class="btn" type="submit" data-t="save"></button><span class="small" id="setMsg"></span></div>
+    </form>
+    <div class="panel">
+      <h3 data-t="dataTitle"></h3>
+      <p class="small muted" data-t="dataLead"></p>
+      <div class="row">
+        <button class="btn ghost small" type="button" id="loadDemo" data-t="loadDemo"></button>
+        <button class="btn ghost small" type="button" id="wipe" data-t="wipe"></button>
+        <button class="btn danger small" type="button" id="wipeConfirm" data-t="wipeConfirm" hidden></button>
+      </div>
+    </div>
+  </section>
+
+  <!-- HELP -->
+  <section data-view="help" class="wrap" style="padding:0" hidden>
+    <div class="panel">
+      <h2 data-t="siriTitle"></h2>
+      <p class="muted small" data-t="siriLead"></p>
+      <div class="field"><label for="baseUrl" data-t="appAddress"></label><input id="baseUrl" type="url"></div>
+      <div id="shortcuts"></div>
+    </div>
+    <div class="panel">
+      <h3 data-t="carplayTitle"></h3>
+      <ol class="steps" id="carplaySteps"></ol>
+    </div>
+    <div class="panel">
+      <h3 data-t="rulesTitle"></h3>
+      <ol class="steps" id="rulesList"></ol>
+    </div>
+  </section>
+</main>
+
+<dialog id="dlg">
+  <form id="tripForm" method="dialog" novalidate>
+    <div class="spread"><h3 id="tfTitle"></h3><span id="tfEdited" class="pill ed" hidden></span></div>
+    <input type="hidden" id="tfId">
+    <div class="grid3">
+      <div class="field"><label for="tfDate" data-t="date"></label><input id="tfDate" type="date"></div>
+      <div class="field"><label for="tfStart" data-t="startTime"></label><input id="tfStart" type="time"></div>
+      <div class="field"><label for="tfEnd" data-t="endTime"></label><input id="tfEnd" type="time"></div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label for="tfSo" data-t="startOdo"></label><input id="tfSo" type="number" inputmode="numeric" min="0"></div>
+      <div class="field"><label for="tfEo" data-t="endOdo"></label><input id="tfEo" type="number" inputmode="numeric" min="0"></div>
+    </div>
+    <div class="field"><label for="tfFromP" data-t="from"></label><select id="tfFromP"></select><input id="tfFromA" type="text" data-tp="phAddr"></div>
+    <div class="field"><label for="tfToP" data-t="to"></label><select id="tfToP"></select><input id="tfToA" type="text" data-tp="phAddr"></div>
+    <div class="grid2">
+      <div class="field"><label for="tfType" data-t="type"></label><select id="tfType"><option value="biz"></option><option value="priv"></option><option value="auto"></option></select></div>
+      <div class="field"><label for="tfDetour" data-t="detourKm"></label><input id="tfDetour" type="number" inputmode="numeric" min="0"></div>
+    </div>
+    <div class="field"><label for="tfPurpose" data-t="purpose"></label><input id="tfPurpose" type="text"></div>
+    <div class="field"><label for="tfRoute" data-t="routeDev"></label><input id="tfRoute" type="text" data-tp="phRoute"></div>
+    <p class="small" id="tfMsg" style="color:var(--priv);min-height:1.2em"></p>
+    <div class="spread">
+      <div class="row"><button class="btn" type="submit" id="tfSave" data-t="save"></button><button class="btn ghost" type="button" id="tfCancel" data-t="cancel"></button></div>
+      <div class="row"><button class="btn ghost small" type="button" id="tfDel" data-t="delete"></button><button class="btn danger small" type="button" id="tfDelOk" data-t="deleteConfirm" hidden></button></div>
+    </div>
+  </form>
+</dialog>
+
+<div class="print" id="printArea"></div>
+<div class="flash" id="flash" role="status" aria-live="polite" hidden></div>
+
+<script>
+(function(){
+"use strict";
+var KEY='i4rittenlog.v1';
+var inFrame=(function(){try{return window.self!==window.top}catch(e){return true}})();
+
+/* ---------- i18n ---------- */
+var L={
+nl:{appName:'Rittenlog',tabToday:'Vandaag',tabLog:'Registratie',tabPlaces:'Locaties',tabExport:'Export',tabSettings:'Instellingen',tabHelp:'Siri & hulp',
+startBiz:'Start zakelijk',startPriv:'Start privé',startAuto:'Start rit',startSub:'km-stand wordt overgenomen',tripRunning:'Rit loopt',since:'sinds',from:'Van',to:'Naar',
+stopTrip:'Stop rit',endOdo:'Eindstand km',startOdo:'Beginstand km',purpose:'Doel van de rit',detourKm:'Privé omrijden (km)',routeDev:'Afwijkende route',phRoute:'Alleen invullen als je anders reed dan normaal',
+type:'Soort',biz:'Zakelijk',priv:'Privé',auto:'Nog bepalen',home:'Thuis',commute:'woon-werk',todo:'aanvullen',edited:'bewerkt',
+today:'Vandaag',noTripsToday:'Nog geen ritten vandaag.',addManual:'Rit handmatig toevoegen',allTrips:'Alle ritten',allMonths:'Alle maanden',noTrips:'Nog geen ritten.',
+statBiz:'zakelijk km',statPriv:'privé km',statCommute:'woon-werk km',statTrips:'ritten',privLimit:'Privé-km dit jaar tegen de grens van 500 km',left:'nog',over:'boven de grens',
+gapTitle:'Gat in de kilometerstand',gapText:'Tussen {a} en {b} ontbreken {km} km.',gapFix:'Ontbrekende rit toevoegen',
+needOdo:'Eindstand ontbreekt',needOdoText:'Vul de eindstand in voor de rit van {d}.',needType:'Zakelijk of privé?',needTypeText:'{n} rit(ten) moeten nog als zakelijk of privé worden aangemerkt.',
+fix:'Aanvullen',placesTitle:'Vaste locaties',placesLead:'Plekken waar je vaak komt. Ritten die hier beginnen of eindigen krijgen automatisch de naam en het standaardlabel. Het volledige adres blijft altijd in de registratie staan.',
+name:'Naam',fullAddress:'Volledig adres',phName:'bijv. Kantoor B',phAddr:'Straat en nummer, postcode, plaats',lookup:'Adres opzoeken',useHere:'Huidige locatie',category:'Categorie',radius:'Straal',
+savePlace:'Locatie opslaan',addPlace:'Locatie toevoegen',editPlace:'Locatie bewerken',cancel:'Annuleren',edit:'Bewerk',remove:'Verwijder',noPlaces:'Nog geen locaties.',
+needName:'Vul een naam en een adres in.',found:'Gevonden',notFound:'Adres niet gevonden. Het adres wordt wel opgeslagen, maar zonder coördinaten kan de app deze locatie niet automatisch herkennen.',
+lookupFail:'Adres opzoeken is hier niet beschikbaar. Je kunt het adres gewoon typen.',noGps:'Locatie niet beschikbaar. Kies de locatie zelf.',coordsOk:'coördinaten bekend',coordsNo:'geen coördinaten',
+exportTitle:'Exporteren',exportLead:'Exporteer voor je accountant of de Belastingdienst. Bewaar het originele bestand 7 jaar.',period:'Periode',printPdf:'Afdrukken / PDF',allData:'Alles',
+frameNote:'In deze voorbeeldweergave kunnen geen bestanden worden gedownload. De CSV staat hieronder om te kopiëren. Op je eigen adres werken alle knoppen.',
+backupTitle:'Back-up',backupLead:'Je gegevens staan alleen op dit apparaat. Maak minstens elke week een back-up en bewaar die in iCloud Drive of op je computer.',
+backupSave:'Back-up maken',backupRestore:'Back-up terugzetten',lastBackup:'Laatste back-up: {d}',neverBackup:'Nog geen back-up gemaakt.',restored:'Back-up teruggezet: {n} ritten, {p} locaties.',badFile:'Dit bestand is geen geldige back-up.',
+vehicle:'Voertuig',make:'Merk',model:'Type',plate:'Kenteken',availFrom:'Ter beschikking vanaf',openingOdo:'Beginstand kilometerteller',openingOdoHelp:'De stand op de dag dat je begint. Maak er ook een foto van als bewijs.',save:'Opslaan',saved:'Opgeslagen.',
+dataTitle:'Gegevens',dataLead:'Voorbeelddata laden vervangt alles. Wissen verwijdert alle ritten en locaties op dit apparaat.',loadDemo:'Voorbeelddata laden',wipe:'Alles wissen',wipeConfirm:'Ja, alles wissen',wiped:'Alle gegevens gewist.',
+demoBanner:'Je bekijkt voorbeelddata. Wis die bij Instellingen voordat je echt begint.',
+setupBanner:'Welkom. Vul eerst bij Instellingen je kenteken en beginstand in, en voeg bij Locaties je vaste adressen toe.',
+siriTitle:'Spraakbediening met Siri',siriLead:'Maak in de Opdrachten-app op je iPhone per zin een opdracht met de actie “Open URL”. De naam van de opdracht is wat je tegen Siri zegt. Open deze app daarna steeds in Safari, niet als losse app op het beginscherm.',
+appAddress:'Adres van deze app',say:'Zeg',actions:'Acties in de opdracht',copy:'Kopieer URL',copied:'Gekopieerd.',
+carplayTitle:'Automatisch starten en stoppen via CarPlay',rulesTitle:'Hoe de app rekent',
+dlgNew:'Rit toevoegen',dlgEdit:'Rit bewerken',date:'Datum',startTime:'Begintijd',endTime:'Eindtijd',delete:'Verwijderen',deleteConfirm:'Ja, verwijderen',
+choosePlace:'— andere locatie —',errOdo:'De eindstand moet hoger zijn dan de beginstand.',errFields:'Vul datum, begintijd en beginstand in.',
+started:'Rit gestart.',stopped:'Rit gestopt: {km} km.',stoppedNoOdo:'Rit gestopt. Vul de eindstand nog in.',purposeSet:'Doel opgeslagen.',detourSet:'Privé omrijden opgeslagen: {km} km.',placeSaved:'Locatie “{n}” opgeslagen.',
+alreadyActive:'Er loopt al een rit.',noActive:'Er loopt geen rit.',locating:'Locatie bepalen…',tripSaved:'Rit opgeslagen.',tripDeleted:'Rit verwijderd.',
+unknownPlace:'onbekende locatie',kmShort:'km',defaultIs:'standaard {x}',sync_local:'Alleen op dit apparaat',sync_loading:'Gegevens laden…',sync_saving:'Opslaan…',sync_cloud:'Opgeslagen in je account',sync_error:'Opslaan mislukt, alleen lokaal',sync_full:'Opslag vol',startPrivInstead:'Deze rit is privé',startBizInstead:'Deze rit is zakelijk',defTypeLbl:'Standaard soort rit',askEvery:'Elke keer kiezen',defTypeHelp:'Geldt voor ritten die je start zonder te kiezen, ook via CarPlay of “Start rit”. Ritten van of naar een privélocatie worden altijd privé; je kunt elke rit achteraf nog wijzigen.'},
+en:{appName:'Trip log',tabToday:'Today',tabLog:'Log',tabPlaces:'Places',tabExport:'Export',tabSettings:'Settings',tabHelp:'Siri & help',
+startBiz:'Start business',startPriv:'Start private',startAuto:'Start trip',startSub:'odometer carried over',tripRunning:'Trip running',since:'since',from:'From',to:'To',
+stopTrip:'Stop trip',endOdo:'End odometer',startOdo:'Start odometer',purpose:'Purpose of the trip',detourKm:'Private detour (km)',routeDev:'Route deviation',phRoute:'Only if you drove a different route than usual',
+type:'Type',biz:'Business',priv:'Private',auto:'To decide',home:'Home',commute:'commute',todo:'incomplete',edited:'edited',
+today:'Today',noTripsToday:'No trips today yet.',addManual:'Add trip manually',allTrips:'All trips',allMonths:'All months',noTrips:'No trips yet.',
+statBiz:'business km',statPriv:'private km',statCommute:'commute km',statTrips:'trips',privLimit:'Private km this year against the 500 km limit',left:'left',over:'over the limit',
+gapTitle:'Gap in the odometer',gapText:'{km} km are missing between {a} and {b}.',gapFix:'Add missing trip',
+needOdo:'End odometer missing',needOdoText:'Enter the end odometer for the trip of {d}.',needType:'Business or private?',needTypeText:'{n} trip(s) still need to be marked business or private.',
+fix:'Complete',placesTitle:'Saved places',placesLead:'Places you go to often. Trips that start or end here get the name and default label automatically. The full address always stays in the log.',
+name:'Name',fullAddress:'Full address',phName:'e.g. Office B',phAddr:'Street and number, postcode, city',lookup:'Look up address',useHere:'Current location',category:'Category',radius:'Radius',
+savePlace:'Save place',addPlace:'Add a place',editPlace:'Edit place',cancel:'Cancel',edit:'Edit',remove:'Remove',noPlaces:'No places yet.',
+needName:'Enter a name and an address.',found:'Found',notFound:'Address not found. It is saved anyway, but without coordinates the app cannot recognise this place automatically.',
+lookupFail:'Address lookup is not available here. You can type the address.',noGps:'Location unavailable. Choose the place yourself.',coordsOk:'coordinates known',coordsNo:'no coordinates',
+exportTitle:'Export',exportLead:'Export for your accountant or the Belastingdienst. Keep the original file for 7 years.',period:'Period',printPdf:'Print / PDF',allData:'Everything',
+frameNote:'Files cannot be downloaded in this preview. The CSV is below to copy. On your own address all buttons work.',
+backupTitle:'Backup',backupLead:'Your data is stored only on this device. Make a backup at least weekly and keep it in iCloud Drive or on your computer.',
+backupSave:'Make backup',backupRestore:'Restore backup',lastBackup:'Last backup: {d}',neverBackup:'No backup made yet.',restored:'Backup restored: {n} trips, {p} places.',badFile:'This file is not a valid backup.',
+vehicle:'Vehicle',make:'Make',model:'Model',plate:'Licence plate',availFrom:'Available from',openingOdo:'Opening odometer',openingOdoHelp:'The reading on the day you start. Take a photo of it as evidence.',save:'Save',saved:'Saved.',
+dataTitle:'Data',dataLead:'Loading example data replaces everything. Erase removes all trips and places on this device.',loadDemo:'Load example data',wipe:'Erase everything',wipeConfirm:'Yes, erase everything',wiped:'All data erased.',
+demoBanner:'You are looking at example data. Erase it in Settings before you start for real.',
+setupBanner:'Welcome. First enter your licence plate and opening odometer in Settings, and add your regular addresses under Places.',
+siriTitle:'Voice control with Siri',siriLead:'In the Shortcuts app on your iPhone, create one shortcut per phrase with the action “Open URLs”. The shortcut name is what you say to Siri. Always open this app in Safari afterwards, not as a separate home-screen app.',
+appAddress:'Address of this app',say:'Say',actions:'Actions in the shortcut',copy:'Copy URL',copied:'Copied.',
+carplayTitle:'Automatic start and stop with CarPlay',rulesTitle:'How the app works things out',
+dlgNew:'Add trip',dlgEdit:'Edit trip',date:'Date',startTime:'Start time',endTime:'End time',delete:'Delete',deleteConfirm:'Yes, delete',
+choosePlace:'— other place —',errOdo:'The end odometer must be higher than the start.',errFields:'Enter date, start time and start odometer.',
+started:'Trip started.',stopped:'Trip stopped: {km} km.',stoppedNoOdo:'Trip stopped. Enter the end odometer later.',purposeSet:'Purpose saved.',detourSet:'Private detour saved: {km} km.',placeSaved:'Place “{n}” saved.',
+alreadyActive:'A trip is already running.',noActive:'No trip is running.',locating:'Finding location…',tripSaved:'Trip saved.',tripDeleted:'Trip deleted.',
+unknownPlace:'unknown place',kmShort:'km',defaultIs:'default {x}',sync_local:'On this device only',sync_loading:'Loading your data…',sync_saving:'Saving…',sync_cloud:'Saved to your account',sync_error:'Save failed, local only',sync_full:'Storage full',startPrivInstead:'This trip is private',startBizInstead:'This trip is business',defTypeLbl:'Default trip type',askEvery:'Choose every time',defTypeHelp:'Applies to trips you start without choosing, including via CarPlay or “Start trip”. Trips to or from a private place are always private; you can still change any trip afterwards.'}
+};
+
+/* ---------- state ---------- */
+function blank(){return {v:1,settings:{lang:(navigator.language||'nl').slice(0,2)==='en'?'en':'nl',make:'BMW',model:'i4',plate:'',from:'',startOdo:null,defType:'biz'},places:[],trips:[],active:null,lastBackup:null,demo:false}}
+var S=blank();
+try{var raw=localStorage.getItem(KEY);if(raw){var p=JSON.parse(raw);if(p&&p.v===1)S=p}}catch(e){}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}cloudSchedule()}
+
+/* ---------- cloud storage (only when opened inside Claude) ---------- */
+var cloud=null,cloudState='local',cloudTimer=null,cloudBusy=Promise.resolve(),written={};
+function setSync(st){cloudState=st;var e=document.getElementById('syncState');if(!e)return;e.textContent=t('sync_'+st);e.className='sync '+st}
+function metaBody(){return {v:1,settings:S.settings,places:S.places,active:S.active,lastBackup:S.lastBackup,demo:!!S.demo,noDemo:!!S.noDemo,savedAt:new Date().toISOString()}}
+function monthGroups(){var g={};S.trips.forEach(function(x){var m=monthKey(x.start);(g[m]=g[m]||[]).push(x)});return g}
+function cloudSchedule(){if(!cloud)return;clearTimeout(cloudTimer);setSync('saving');cloudTimer=setTimeout(cloudFlush,700)}
+function cloudFlush(){
+  if(!cloud)return;
+  cloudBusy=cloudBusy.then(function(){
+    var jobs=[],mb=metaBody(),mj=JSON.stringify(Object.assign({},mb,{savedAt:0}));
+    if(written.__meta!==mj)jobs.push(function(){return cloud.meta.set(mb).then(function(){written.__meta=mj})});
+    var g=monthGroups();
+    Object.keys(g).forEach(function(m){var j=JSON.stringify(g[m]);if(written[m]!==j)jobs.push(function(){return cloud.months.doc(m).set({trips:g[m]}).then(function(){written[m]=j})})});
+    Object.keys(written).forEach(function(m){if(m!=='__meta'&&!g[m]&&written[m]!=='[]')jobs.push(function(){return cloud.months.doc(m).set({trips:[]}).then(function(){written[m]='[]'})})});
+    return jobs.reduce(function(pr,fn){return pr.then(fn)},Promise.resolve()).then(function(){setSync('cloud')},function(e){setSync(e&&e.code==='quota_exceeded'?'full':'error')});
+  });
+}
+function cloudInit(){
+  var c=window.claude;if(!c||typeof c.use!=='function')return;
+  setSync('loading');
+  Promise.all([c.use('db'),c.use('user')]).then(function(r){
+    var db=r[0],u=r[1];if(!db||!u){setSync('local');return}
+    return u.id().then(function(uid){
+      if(!uid){setSync('local');return}
+      var meta=db.doc('data/users/'+uid+'/meta');
+      cloud={meta:meta,months:meta.collection('months')};
+      return Promise.all([meta.get(),cloud.months.get()]).then(function(res){
+        var m=res[0],ms=res[1];
+        if(m.exists){
+          var d=JSON.parse(JSON.stringify(m.data())),trips=[];
+          ms.docs.forEach(function(doc){var b=doc.data()||{};var arr=Array.isArray(b.trips)?b.trips:[];written[doc.id]=JSON.stringify(arr);trips=trips.concat(JSON.parse(JSON.stringify(arr)))});
+          S={v:1,settings:d.settings||blank().settings,places:d.places||[],trips:trips,active:d.active||null,lastBackup:d.lastBackup||null,demo:!!d.demo,noDemo:!!d.noDemo};
+          written.__meta=JSON.stringify(Object.assign({},d,{savedAt:0}));
+          try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}
+          renderAll();setSync('cloud');
+        }else{cloudFlush()}
+      });
+    });
+  }).catch(function(){cloud=null;setSync('error')});
+}
+try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist()}catch(e){}
+
+function defType(){var d=S.settings.defType;return d==='priv'||d==='ask'?d:'biz'}
+function t(k,vars){var s=(L[S.settings.lang]||L.nl)[k];if(s==null)s=L.en[k]||k;if(vars)for(var x in vars)s=s.split('{'+x+'}').join(vars[x]);return s}
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7)}
+function $(id){return document.getElementById(id)}
+function el(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e}
+function loc(){return S.settings.lang==='en'?'en-GB':'nl-NL'}
+function fmtN(n){return n==null||n===''?'—':Number(n).toLocaleString(loc())}
+function fmtDate(iso,opt){return new Date(iso).toLocaleDateString(loc(),opt||{weekday:'short',day:'numeric',month:'short',year:'numeric'})}
+function fmtTime(iso){return iso?new Date(iso).toLocaleTimeString(loc(),{hour:'2-digit',minute:'2-digit'}):'—'}
+function dayKey(iso){var d=new Date(iso);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
+function monthKey(iso){return dayKey(iso).slice(0,7)}
+function km(tr){return (tr.eo!=null&&tr.so!=null)?tr.eo-tr.so:null}
+function placeById(id){for(var i=0;i<S.places.length;i++)if(S.places[i].id===id)return S.places[i];return null}
+function endName(e){var p=e&&e.pid?placeById(e.pid):null;return p?p.name:''}
+function catOf(e){var p=e&&e.pid?placeById(e.pid):null;return p?p.cat:null}
+function isCommute(tr){var a=catOf(tr.from),b=catOf(tr.to);return (a==='home'&&b==='biz')||(a==='biz'&&b==='home')}
+function sorted(){var m=function(x){return Math.floor(new Date(x.start).getTime()/60000)};return S.trips.slice().sort(function(a,b){var d=m(a)-m(b);if(d)return d;var sa=a.so==null?Infinity:a.so,sb=b.so==null?Infinity:b.so;return sa-sb})}
+function lastTrip(){var s=sorted();return s.length?s[s.length-1]:null}
+
+var flashT;
+function flash(msg){var f=$('flash');f.textContent=msg;f.hidden=false;clearTimeout(flashT);flashT=setTimeout(function(){f.hidden=true},3200)}
+
+/* ---------- location ---------- */
+function getPos(){return new Promise(function(res){
+  if(!navigator.geolocation)return res(null);
+  try{navigator.geolocation.getCurrentPosition(function(p){res({lat:p.coords.latitude,lon:p.coords.longitude,acc:p.coords.accuracy})},function(){res(null)},{enableHighAccuracy:true,timeout:12000,maximumAge:30000})}catch(e){res(null)}
+})}
+function dist(a,b){var R=6371000,r=Math.PI/180,dLat=(b.lat-a.lat)*r,dLon=(b.lon-a.lon)*r;var h=Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(a.lat*r)*Math.cos(b.lat*r)*Math.sin(dLon/2)*Math.sin(dLon/2);return 2*R*Math.asin(Math.sqrt(h))}
+function matchPlace(pos){var best=null,bd=1e12;S.places.forEach(function(p){if(p.lat==null)return;var d=dist(pos,p);if(d<=Math.max(p.r,Math.min(pos.acc||0,300))&&d<bd){bd=d;best=p}});return best}
+var PDOK='https://api.pdok.nl/bzk/locatieserver/search/v3_1/';
+function reverseGeo(pos){return fetch(PDOK+'reverse?lat='+pos.lat+'&lon='+pos.lon+'&rows=1&type=adres').then(function(r){return r.json()}).then(function(j){var d=j&&j.response&&j.response.docs&&j.response.docs[0];return d?d.weergavenaam:null}).catch(function(){return null})}
+function forwardGeo(q){return fetch(PDOK+'free?rows=1&fq=type:adres&q='+encodeURIComponent(q)).then(function(r){return r.json()}).then(function(j){var d=j&&j.response&&j.response.docs&&j.response.docs[0];if(!d)return {none:true};var m=/POINT\(([-\d.]+) ([-\d.]+)\)/.exec(d.centroide_ll||'');return m?{addr:d.weergavenaam,lon:+m[1],lat:+m[2]}:{none:true}}).catch(function(){return null})}
+function resolveEnd(pos){
+  if(!pos)return Promise.resolve({pid:null,addr:'',lat:null,lon:null});
+  var p=matchPlace(pos);
+  if(p)return Promise.resolve({pid:p.id,addr:p.addr,lat:pos.lat,lon:pos.lon});
+  return reverseGeo(pos).then(function(a){return {pid:null,addr:a||(pos.lat.toFixed(5)+', '+pos.lon.toFixed(5)),lat:pos.lat,lon:pos.lon}});
+}
+function decideType(tr){
+  if(tr.type!=='auto')return tr.type;
+  var a=catOf(tr.from),b=catOf(tr.to);
+  if(a==='priv'||b==='priv')return 'priv';
+  if(a==='biz'||b==='biz')return 'biz';
+  return defType()==='ask'?'auto':defType();
+}
+
+/* ---------- actions ---------- */
+function startTrip(o){
+  o=o||{};
+  if(S.active){flash(t('alreadyActive'));return Promise.resolve()}
+  var lt=lastTrip();
+  var so=o.odo!=null&&!isNaN(o.odo)?o.odo:(lt&&lt.eo!=null?lt.eo:S.settings.startOdo);
+  flash(t('locating'));
+  return getPos().then(function(pos){return resolveEnd(pos).then(function(from){
+    if(!from.addr&&lt&&lt.to)from=JSON.parse(JSON.stringify(lt.to));
+    S.active={id:uid(),start:new Date().toISOString(),so:so==null?null:+so,from:from,type:o.type||'auto',purpose:'',detour:0,route:''};
+    save();renderAll();flash(t('started'));
+  })});
+}
+function stopTrip(o){
+  o=o||{};
+  if(!S.active){flash(t('noActive'));return Promise.resolve()}
+  flash(t('locating'));
+  return getPos().then(function(pos){return resolveEnd(pos).then(function(to){
+    var a=S.active,eo=o.odo!=null&&!isNaN(o.odo)&&o.odo!==''?+o.odo:null;
+    if(eo!=null&&a.so!=null&&eo<a.so){flash(t('errOdo'));return}
+    var tr={id:a.id,start:a.start,end:new Date().toISOString(),so:a.so,eo:eo,from:a.from,to:to,type:a.type,purpose:a.purpose||'',detour:+a.detour||0,route:a.route||''};
+    tr.type=decideType(tr);
+    S.trips.push(tr);S.active=null;save();renderAll();
+    flash(eo!=null&&tr.so!=null?t('stopped',{km:eo-tr.so}):t('stoppedNoOdo'));
+  })});
+}
+function savePlaceHere(name,cat){
+  flash(t('locating'));
+  return getPos().then(function(pos){
+    if(!pos){flash(t('noGps'));return}
+    return reverseGeo(pos).then(function(a){
+      S.places.push({id:uid(),name:name||('Locatie '+(S.places.length+1)),addr:a||(pos.lat.toFixed(5)+', '+pos.lon.toFixed(5)),cat:cat||'biz',r:250,lat:pos.lat,lon:pos.lon});
+      save();renderAll();flash(t('placeSaved',{n:name}));
+    });
+  });
+}
+
+/* ---------- URL commands (for Siri Shortcuts) ---------- */
+function runCommand(){
+  var q;try{q=new URLSearchParams(location.search)}catch(e){return}
+  var cmd=q.get('cmd');if(!cmd)return;
+  try{history.replaceState(null,'',location.pathname+location.hash)}catch(e){}
+  var num=function(k){var v=q.get(k);if(v==null||v==='')return null;v=v.replace(/[^\d]/g,'');return v===''?null:+v};
+  if(cmd==='start'){var ty=q.get('type');startTrip({type:ty==='biz'||ty==='priv'?ty:'auto',odo:num('odo')})}
+  else if(cmd==='stop'){stopTrip({odo:num('odo')})}
+  else if(cmd==='purpose'){var tx=q.get('text')||'';var tgt=S.active||lastTrip();if(tgt){tgt.purpose=tx;save();renderAll();flash(t('purposeSet'))}}
+  else if(cmd==='detour'){var k=num('km')||0;if(S.active){S.active.detour=(+S.active.detour||0)+k;save();renderAll();flash(t('detourSet',{km:k}))}else flash(t('noActive'))}
+  else if(cmd==='type'){var ty2=q.get('type');var tg=S.active||lastTrip();if(tg&&(ty2==='biz'||ty2==='priv')){tg.type=ty2;save();renderAll();flash(t('saved'))}}
+  else if(cmd==='saveplace'){var c=q.get('cat');savePlaceHere(q.get('name')||'',c==='home'||c==='priv'?c:'biz')}
+}
+
+/* ---------- rendering ---------- */
+var tab='today';
+function setTab(n){tab=n;document.querySelectorAll('[data-view]').forEach(function(v){v.hidden=v.getAttribute('data-view')!==n});document.querySelectorAll('[data-tab]').forEach(function(b){b.setAttribute('aria-selected',b.getAttribute('data-tab')===n)});try{sessionStorage.setItem('i4tab',n)}catch(e){};window.scrollTo(0,0)}
+function staticText(){
+  document.documentElement.lang=S.settings.lang;
+  document.querySelectorAll('[data-t]').forEach(function(e){e.textContent=t(e.getAttribute('data-t'))});
+  document.querySelectorAll('[data-tp]').forEach(function(e){e.placeholder=t(e.getAttribute('data-tp'))});
+  $('lNL').setAttribute('aria-pressed',S.settings.lang==='nl');$('lEN').setAttribute('aria-pressed',S.settings.lang==='en');
+  var pc=$('plCat').options;pc[0].textContent=t('biz');pc[1].textContent=t('home');pc[2].textContent=t('priv');
+  var sd=$('sDef').options;sd[0].textContent=t('biz');sd[1].textContent=t('priv');sd[2].textContent=t('askEvery');
+  var ty=$('tfType').options;ty[0].textContent=t('biz');ty[1].textContent=t('priv');ty[2].textContent=t('auto');
+  setSync(cloudState);
+  $('hdrPlate').textContent=S.settings.plate||(S.settings.make+' '+S.settings.model);
+}
+function pill(cls,txt){return el('span','pill '+cls,txt)}
+function tripRow(tr){
+  var b=el('button','trip');b.type='button';
+  b.appendChild(el('span','tm',fmtTime(tr.start)));
+  var nmA=endName(tr.from)||tr.from.addr||t('unknownPlace'),nmB=endName(tr.to)||tr.to.addr||t('unknownPlace');
+  b.appendChild(el('span','rt',nmA+' → '+nmB));
+  var k=km(tr);b.appendChild(el('span','km',k==null?'—':k+' km'));
+  var sub=el('span','sub');
+  var ty=tr.type==='auto'?decideType(tr):tr.type;
+  if(ty==='auto')sub.appendChild(pill('todo',t('auto')));else sub.appendChild(pill(ty,t(ty)));
+  if(isCommute(tr))sub.appendChild(pill('cm',t('commute')));
+  if(tr.eo==null||tr.so==null)sub.appendChild(pill('todo',t('todo')));
+  if(tr.editedAt)sub.appendChild(pill('ed',t('edited')));
+  if(tr.detour)sub.appendChild(el('span','',t('detourKm')+': '+tr.detour));
+  if(tr.purpose)sub.appendChild(el('span','',tr.purpose));
+  b.appendChild(sub);
+  var ad=el('span','ad',fmtN(tr.so)+' → '+fmtN(tr.eo)+' · '+(tr.from.addr||'?')+' → '+(tr.to.addr||'?'));b.appendChild(ad);
+  b.addEventListener('click',function(){openTrip(tr.id)});
+  return b;
+}
+function notices(){
+  var box=$('notices');box.innerHTML='';
+  if(S.demo){var d=el('div','banner info',t('demoBanner'));box.appendChild(d)}
+  else if(!S.settings.plate||S.settings.startOdo==null){var s=el('div','banner info',t('setupBanner'));box.appendChild(s)}
+  var miss=S.trips.filter(function(x){return x.eo==null||x.so==null});
+  miss.slice(0,3).forEach(function(x){var w=el('div','banner warn');w.appendChild(el('strong','',t('needOdo')));w.appendChild(el('span','',t('needOdoText',{d:fmtDate(x.start)+' '+fmtTime(x.start)})));var bt=el('button','btn small',t('fix'));bt.type='button';bt.style.justifySelf='start';bt.onclick=function(){openTrip(x.id)};w.appendChild(bt);box.appendChild(w)});
+  var und=S.trips.filter(function(x){return decideType(x)==='auto'});
+  if(und.length){var u=el('div','banner warn');u.appendChild(el('strong','',t('needType')));u.appendChild(el('span','',t('needTypeText',{n:und.length})));var b2=el('button','btn small',t('fix'));b2.type='button';b2.style.justifySelf='start';b2.onclick=function(){openTrip(und[0].id)};u.appendChild(b2);box.appendChild(u)}
+}
+function renderActive(){
+  var box=$('activeBox');box.innerHTML='';
+  if(!S.active){
+    var dt=defType();
+    if(dt==='ask'){
+      var g=el('div','big');
+      [['biz','startBiz'],['priv','startPriv']].forEach(function(x){var b=el('button','btn '+x[0]);b.type='button';b.appendChild(el('span','',t(x[1])));b.appendChild(el('small','',t('startSub')));b.onclick=function(){startTrip({type:x[0]})};g.appendChild(b)});
+      box.appendChild(g);return;
+    }
+    var w=el('div','wrap');w.style.padding='0';w.style.gap='8px';
+    var mb=el('button','btn '+dt);mb.type='button';mb.style.minHeight='84px';mb.style.fontSize='19px';mb.style.borderRadius='14px';mb.style.display='grid';mb.style.placeItems='center';
+    mb.appendChild(el('span','',t('startAuto')));mb.appendChild(el('small','',t('defaultIs',{x:t(dt).toLowerCase()})+' · '+t('startSub')));
+    mb.onclick=function(){startTrip({type:'auto'})};w.appendChild(mb);
+    var other=dt==='biz'?'priv':'biz';var ob=el('button','btn ghost small',t(other==='priv'?'startPrivInstead':'startBizInstead'));ob.type='button';ob.style.justifySelf='center';ob.onclick=function(){startTrip({type:other})};w.appendChild(ob);
+    box.appendChild(w);return;
+  }
+  var a=S.active,p=el('div','panel active');
+  var hd=el('div','spread');var lv=el('span','live');lv.appendChild(el('i'));lv.appendChild(document.createTextNode(t('tripRunning')));hd.appendChild(lv);
+  hd.appendChild(el('span','mono muted small',t('since')+' '+fmtTime(a.start)+' · '+fmtN(a.so)+' km'));p.appendChild(hd);
+  p.appendChild(el('h3','',t('from')+': '+(endName(a.from)||a.from.addr||t('unknownPlace'))));
+  var g2=el('div','grid2');
+  var f1=el('div','field');f1.appendChild(el('label','lbl',t('type')));var s1=el('select');s1.id='acType';[['biz','biz'],['priv','priv'],['auto','auto']].forEach(function(o){var op=el('option','',t(o[1]));op.value=o[0];if(a.type===o[0])op.selected=true;s1.appendChild(op)});s1.onchange=function(){a.type=s1.value;save()};f1.querySelector('label').htmlFor='acType';f1.appendChild(s1);g2.appendChild(f1);
+  var f2=el('div','field');var l2=el('label','lbl',t('detourKm'));l2.htmlFor='acDet';f2.appendChild(l2);var i2=el('input');i2.id='acDet';i2.type='number';i2.inputMode='numeric';i2.min='0';i2.value=a.detour||'';i2.onchange=function(){a.detour=+i2.value||0;save()};f2.appendChild(i2);g2.appendChild(f2);
+  p.appendChild(g2);
+  var f3=el('div','field');var l3=el('label','lbl',t('purpose'));l3.htmlFor='acPur';f3.appendChild(l3);var i3=el('input');i3.id='acPur';i3.type='text';i3.value=a.purpose||'';i3.oninput=function(){a.purpose=i3.value;save()};f3.appendChild(i3);p.appendChild(f3);
+  var r=el('div','row');var f4=el('div','field');f4.style.flex='1 1 160px';var l4=el('label','lbl',t('endOdo'));l4.htmlFor='acEo';f4.appendChild(l4);var i4=el('input');i4.id='acEo';i4.type='number';i4.inputMode='numeric';i4.min=a.so||0;i4.placeholder=a.so!=null?String(a.so):'';f4.appendChild(i4);r.appendChild(f4);
+  var sb=el('button','btn',t('stopTrip'));sb.type='button';sb.style.alignSelf='end';sb.onclick=function(){stopTrip({odo:i4.value===''?null:+i4.value})};r.appendChild(sb);p.appendChild(r);
+  box.appendChild(p);
+}
+function renderToday(){
+  notices();renderActive();
+  var today=dayKey(new Date().toISOString());
+  $('todayTitle').textContent=t('today')+' · '+fmtDate(new Date().toISOString(),{weekday:'long',day:'numeric',month:'long'});
+  var list=$('todayTrips');list.innerHTML='';
+  var trs=sorted().filter(function(x){return dayKey(x.start)===today});
+  if(!trs.length)list.appendChild(el('p','muted small',t('noTripsToday')));
+  var b=0,p=0;trs.forEach(function(x){list.appendChild(tripRow(x));var k=km(x)||0,ty=decideType(x);if(ty==='priv')p+=k;else if(ty==='biz'){b+=k-(+x.detour||0);p+=(+x.detour||0)}});
+  $('todayKm').textContent=t('biz')+' '+b+' · '+t('priv')+' '+p+' km';
+}
+function yearStats(y){
+  var r={biz:0,priv:0,commute:0,n:0};
+  S.trips.forEach(function(x){if(new Date(x.start).getFullYear()!==y)return;var k=km(x);r.n++;if(k==null)return;var ty=decideType(x),d=+x.detour||0;if(ty==='priv')r.priv+=k;else if(ty==='biz'){r.biz+=k-d;r.priv+=d}if(isCommute(x))r.commute+=k});
+  return r;
+}
+function gaps(){
+  var s=sorted(),g=[];
+  for(var i=1;i<s.length;i++){var a=s[i-1],b=s[i];if(a.eo!=null&&b.so!=null&&b.so!==a.eo)g.push({a:a,b:b,km:b.so-a.eo})}
+  return g;
+}
+function renderLog(){
+  var y=new Date().getFullYear(),st=yearStats(y),box=$('stats');box.innerHTML='';
+  [[st.biz,'statBiz'],[st.priv,'statPriv'],[st.commute,'statCommute'],[st.n,'statTrips']].forEach(function(x){var d=el('div','stat');d.appendChild(el('span','n',fmtN(x[0])));d.appendChild(el('span','l',t(x[1])+' '+y));box.appendChild(d)});
+  var mb=$('meterBox');mb.innerHTML='';mb.appendChild(el('div','lbl',t('privLimit')));
+  var m=el('div','meter'+(st.priv>500?' over':''));var i=el('i');i.style.width=Math.min(100,st.priv/5)+'%';m.appendChild(i);mb.appendChild(m);
+  mb.appendChild(el('p','small mono',fmtN(st.priv)+' / 500 km · '+(st.priv<=500?fmtN(500-st.priv)+' km '+t('left'):fmtN(st.priv-500)+' km '+t('over'))));
+  var gb=$('gapBox');gb.innerHTML='';
+  gaps().forEach(function(g){var w=el('div','banner warn');w.appendChild(el('strong','',t('gapTitle')));w.appendChild(el('span','',t('gapText',{km:fmtN(g.km),a:fmtN(g.a.eo),b:fmtN(g.b.so)})));var bt=el('button','btn small',t('gapFix'));bt.type='button';bt.style.justifySelf='start';bt.onclick=function(){openTrip(null,{so:g.a.eo,eo:g.b.so,from:g.a.to,to:g.b.from,start:g.a.end||g.a.start})};w.appendChild(bt);gb.appendChild(w)});
+  var ms=$('monthSel'),cur=ms.value;ms.innerHTML='';var o0=el('option','',t('allMonths'));o0.value='';ms.appendChild(o0);
+  var months={};S.trips.forEach(function(x){months[monthKey(x.start)]=1});
+  Object.keys(months).sort().reverse().forEach(function(k){var o=el('option','',new Date(k+'-15').toLocaleDateString(loc(),{month:'long',year:'numeric'}));o.value=k;ms.appendChild(o)});
+  if(cur&&months[cur])ms.value=cur;else if(!cur){var km0=Object.keys(months).sort().reverse()[0];if(km0)ms.value=km0}
+  var list=$('logTrips');list.innerHTML='';
+  var trs=sorted().reverse().filter(function(x){return !ms.value||monthKey(x.start)===ms.value});
+  if(!trs.length)list.appendChild(el('p','muted small',t('noTrips')));
+  var lastDay=null;
+  trs.forEach(function(x){var d=dayKey(x.start);if(d!==lastDay){lastDay=d;var tot=trs.filter(function(z){return dayKey(z.start)===d}).reduce(function(s,z){return s+(km(z)||0)},0);var h=el('div','dayhead');h.appendChild(el('span','',fmtDate(x.start)));h.appendChild(el('span','mono',tot+' km'));list.appendChild(h)}list.appendChild(tripRow(x))});
+}
+var editingPlace=null;
+function renderPlaces(){
+  var box=$('placeList');box.innerHTML='';
+  if(!S.places.length)box.appendChild(el('p','muted small',t('noPlaces')));
+  S.places.forEach(function(p){
+    var r=el('div','place');var rr=p.r<=100?6:p.r<=250?9:p.r<=500?13:16;
+    var ns='http://www.w3.org/2000/svg',svg=document.createElementNS(ns,'svg');svg.setAttribute('width','36');svg.setAttribute('height','36');svg.setAttribute('viewBox','0 0 36 36');svg.setAttribute('aria-hidden','true');
+    var c1=document.createElementNS(ns,'circle');c1.setAttribute('class','ring '+(p.cat==='biz'?'':p.cat));c1.setAttribute('cx','18');c1.setAttribute('cy','18');c1.setAttribute('r',rr);svg.appendChild(c1);
+    var c2=document.createElementNS(ns,'circle');c2.setAttribute('class','pin');c2.setAttribute('cx','18');c2.setAttribute('cy','18');c2.setAttribute('r','2.5');svg.appendChild(c2);r.appendChild(svg);
+    var mid=el('div');var nm=el('div','nm');nm.appendChild(el('span','',p.name));nm.appendChild(pill(p.cat,t(p.cat)));mid.appendChild(nm);
+    mid.appendChild(el('div','ad',p.addr+' · '+(p.r>=1000?p.r/1000+' km':p.r+' m')+' · '+(p.lat!=null?t('coordsOk'):t('coordsNo'))));r.appendChild(mid);
+    var acts=el('div','row');var eb=el('button','btn ghost small',t('edit'));eb.type='button';eb.onclick=function(){fillPlaceForm(p)};acts.appendChild(eb);
+    var db=el('button','btn ghost small',t('remove'));db.type='button';db.onclick=function(){if(db.dataset.sure){S.places=S.places.filter(function(x){return x.id!==p.id});save();renderAll()}else{db.dataset.sure='1';db.textContent=t('deleteConfirm');db.className='btn danger small'}};acts.appendChild(db);
+    r.appendChild(acts);box.appendChild(r);
+  });
+  $('placeFormTitle').textContent=editingPlace?t('editPlace'):t('addPlace');$('plCancel').hidden=!editingPlace;
+}
+var plGeo=null;
+function fillPlaceForm(p){editingPlace=p.id;$('plId').value=p.id;$('plName').value=p.name;$('plAddr').value=p.addr;$('plCat').value=p.cat;$('plRad').value=String(p.r);plGeo=p.lat!=null?{lat:p.lat,lon:p.lon}:null;$('plCoords').textContent=plGeo?t('coordsOk'):'';setTab('places');renderPlaces();$('plName').focus()}
+function resetPlaceForm(){editingPlace=null;$('placeForm').reset();$('plRad').value='250';plGeo=null;$('plCoords').textContent='';$('plMsg').textContent='';renderPlaces()}
+
+function periods(){
+  var ys={},ms={};S.trips.forEach(function(x){ys[new Date(x.start).getFullYear()]=1;ms[monthKey(x.start)]=1});
+  var out=[{v:'all',l:t('allData')}];
+  Object.keys(ys).sort().reverse().forEach(function(y){out.push({v:'y'+y,l:y})});
+  Object.keys(ms).sort().reverse().forEach(function(m){out.push({v:'m'+m,l:new Date(m+'-15').toLocaleDateString(loc(),{month:'long',year:'numeric'})})});
+  return out;
+}
+function renderExport(){
+  var sel=$('expPeriod'),cur=sel.value;sel.innerHTML='';periods().forEach(function(p){var o=el('option','',p.l);o.value=p.v;sel.appendChild(o)});if(cur)sel.value=cur;if(!sel.value)sel.selectedIndex=0;
+  $('expNote').textContent=inFrame?t('frameNote'):'';$('expPrint').hidden=inFrame;
+  $('lastBackup').textContent=S.lastBackup?t('lastBackup',{d:fmtDate(S.lastBackup)+' '+fmtTime(S.lastBackup)}):t('neverBackup');
+}
+function renderSettings(){var s=S.settings;$('sMake').value=s.make||'';$('sModel').value=s.model||'';$('sPlate').value=s.plate||'';$('sFrom').value=s.from||'';$('sOdo').value=s.startOdo==null?'':s.startOdo;$('sDef').value=defType()}
+function base(){var b=$('baseUrl').value.trim();return b||(location.origin&&location.origin!=='null'?location.origin+location.pathname:'https://jouw-adres.github.io/rittenlog/')}
+function renderHelp(){
+  if(!$('baseUrl').value)$('baseUrl').value=(!inFrame&&location.origin!=='null')?location.origin+location.pathname:'';
+  $('baseUrl').placeholder='https://…/rittenlog/';
+  var nl=S.settings.lang==='nl';
+  var sc=[
+    {say:nl?'Start rit':'Start trip',url:'?cmd=start',act:['Open URL: {url}']},
+    {say:nl?'Start zakelijke rit':'Start business trip',url:'?cmd=start&type=biz',act:nl?['Open URL: {url}']:['Open URLs: {url}']},
+    {say:nl?'Start privérit':'Start private trip',url:'?cmd=start&type=priv',act:['Open URL: {url}']},
+    {say:nl?'Stop rit':'Stop trip',url:'?cmd=stop&odo=',act:nl?['Vraag om invoer: Getal, vraag “Wat is de kilometerstand?”','Open URL: {url} + [Opgegeven invoer]']:['Ask for Input: Number, prompt “What is the odometer reading?”','Open URLs: {url} + [Provided Input]']},
+    {say:nl?'Ritdoel':'Trip purpose',url:'?cmd=purpose&text=',act:nl?['Dicteer tekst','Open URL: {url} + [Gedicteerde tekst]']:['Dictate Text','Open URLs: {url} + [Dictated Text]']},
+    {say:nl?'Privé omrijden':'Private detour',url:'?cmd=detour&km=',act:nl?['Vraag om invoer: Getal, “Hoeveel kilometer?”','Open URL: {url} + [Opgegeven invoer]']:['Ask for Input: Number, “How many kilometres?”','Open URLs: {url} + [Provided Input]']},
+    {say:nl?'Bewaar deze plek':'Save this place',url:'?cmd=saveplace&name=',act:nl?['Vraag om invoer: Tekst, “Hoe heet deze plek?”','Open URL: {url} + [Opgegeven invoer]']:['Ask for Input: Text, “What is this place called?”','Open URLs: {url} + [Provided Input]']},
+    {say:nl?'Rit was privé':'Trip was private',url:'?cmd=type&type=priv',act:['Open URL: {url}']}
+  ];
+  var box=$('shortcuts');box.innerHTML='';
+  sc.forEach(function(s){
+    var d=el('div','sc');var h=el('div','spread');h.appendChild(el('strong','','“Hé Siri, '.replace('Hé',nl?'Hé':'Hey')+s.say+'”'));d.appendChild(h);
+    var full=base()+s.url;d.appendChild(el('code','',full));
+    var ol=el('ol','steps small');s.act.forEach(function(a){if(!nl)a=a.replace(/^Open URL:/,'Open URLs:');ol.appendChild(el('li','',a.replace('{url}',full)))});d.appendChild(ol);
+    var cb=el('button','btn ghost small',t('copy'));cb.type='button';cb.style.justifySelf='start';cb.onclick=function(){try{navigator.clipboard.writeText(full).then(function(){flash(t('copied'))},function(){flash(full)})}catch(e){flash(full)}};d.appendChild(cb);
+    box.appendChild(d);
+  });
+  var cp=nl?[
+    'Opdrachten-app → Automatisering → Nieuwe automatisering → CarPlay → “Maakt verbinding”. Kies “Voer direct uit”.',
+    'Actie: Open URL '+base()+'?cmd=start&type=auto. De beginstand wordt overgenomen van de vorige rit; zakelijk of privé volgt uit je vaste locaties, of zeg “Start zakelijke rit”.',
+    'Tweede automatisering: CarPlay → “Verbreekt verbinding” → Vraag om invoer (Getal, “Kilometerstand?”) → Open URL '+base()+'?cmd=stop&odo=[Opgegeven invoer].',
+    'Vergeet je de stand, dan wordt de rit toch opgeslagen en vraagt de app je die later aan te vullen. Zo ontstaat er nooit een gat.'
+  ]:[
+    'Shortcuts app → Automation → New Automation → CarPlay → “Connects”. Choose “Run Immediately”.',
+    'Action: Open URLs '+base()+'?cmd=start&type=auto. The start odometer is taken from the previous trip; business or private follows from your saved places, or say “Start business trip”.',
+    'Second automation: CarPlay → “Disconnects” → Ask for Input (Number, “Odometer?”) → Open URLs '+base()+'?cmd=stop&odo=[Provided Input].',
+    'If you skip the reading, the trip is still saved and the app asks you to complete it later. That way there is never a gap.'
+  ];
+  var cl=$('carplaySteps');cl.innerHTML='';cp.forEach(function(x){cl.appendChild(el('li','small',x))});
+  var ru=nl?[
+    'De beginstand van een nieuwe rit is de eindstand van de vorige. Wijkt een stand af, dan meldt de registratie een gat met een knop om de ontbrekende rit toe te voegen.',
+    'Rit naar of van een privélocatie: privé. Naar of van een zakelijke locatie: zakelijk. Overige ritten krijgen de standaardsoort uit Instellingen (standaard zakelijk). Tussen thuis en een zakelijke locatie: zakelijk met markering woon-werk (voor de btw telt woon-werk als privé).',
+    'Privé omrijden telt als privé-km, ook binnen een zakelijke rit.',
+    'Elke rit bewaart het volledige adres. Een locatie hernoemen of verwijderen verandert oude ritten niet.',
+    'Handmatig bewerkte ritten krijgen de markering “bewerkt” met datum, ook in de export.',
+    (cloud?'Je gegevens worden opgeslagen in je Claude-account en blijven bewaard als je de app sluit. Maak toch regelmatig een back-up bij Export.':'Gegevens staan alleen op dit apparaat, in Safari. Maak regelmatig een back-up bij Export.')
+  ]:[
+    'A new trip starts at the previous trip’s end odometer. If a reading differs, the log shows a gap with a button to add the missing trip.',
+    'Trip to or from a private place: private. To or from a business place: business. Other trips get the default type from Settings (business unless you change it). Between home and a business place: business, flagged as commute (for VAT, commuting counts as private).',
+    'Private detour km count as private, even inside a business trip.',
+    'Every trip keeps the full address. Renaming or deleting a place does not change past trips.',
+    'Trips edited by hand are flagged “edited” with a date, also in the export.',
+    (cloud?'Your data is saved to your Claude account and stays when you close the app. Still make regular backups under Export.':'Data lives only on this device, in Safari. Make regular backups under Export.')
+  ];
+  var rl=$('rulesList');rl.innerHTML='';ru.forEach(function(x){rl.appendChild(el('li','small',x))});
+}
+function renderAll(){staticText();renderToday();renderLog();renderPlaces();renderExport();renderSettings();renderHelp()}
+
+/* ---------- trip dialog ---------- */
+function pad(n){return String(n).padStart(2,'0')}
+function toLocalDate(iso){var d=new Date(iso);return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())}
+function toLocalTime(iso){var d=new Date(iso);return pad(d.getHours())+':'+pad(d.getMinutes())}
+function fillPlaceSelect(sel,endp){
+  sel.innerHTML='';var o=el('option','',t('choosePlace'));o.value='';sel.appendChild(o);
+  S.places.forEach(function(p){var op=el('option','',p.name);op.value=p.id;sel.appendChild(op)});
+  sel.value=endp&&endp.pid&&placeById(endp.pid)?endp.pid:'';
+}
+function openTrip(id,prefill){
+  var tr=id?S.trips.filter(function(x){return x.id===id})[0]:null;
+  var src=tr||prefill||{};
+  $('tfId').value=tr?tr.id:'';$('tfTitle').textContent=tr?t('dlgEdit'):t('dlgNew');
+  var st=src.start||new Date().toISOString();
+  $('tfDate').value=toLocalDate(st);$('tfStart').value=toLocalTime(st);$('tfEnd').value=src.end?toLocalTime(src.end):'';
+  var lt=lastTrip();
+  $('tfSo').value=src.so!=null?src.so:(!tr&&!prefill?(lt&&lt.eo!=null?lt.eo:(S.settings.startOdo!=null?S.settings.startOdo:'')):'');$('tfEo').value=src.eo!=null?src.eo:'';
+  fillPlaceSelect($('tfFromP'),src.from);fillPlaceSelect($('tfToP'),src.to);
+  $('tfFromA').value=src.from?src.from.addr||'':'';$('tfToA').value=src.to?src.to.addr||'':'';
+  $('tfType').value=tr?decideType(tr):(defType()==='ask'?'biz':defType());$('tfDetour').value=src.detour||'';$('tfPurpose').value=src.purpose||'';$('tfRoute').value=src.route||'';
+  $('tfEdited').hidden=!(tr&&tr.editedAt);if(tr&&tr.editedAt)$('tfEdited').textContent=t('edited')+' '+fmtDate(tr.editedAt,{day:'numeric',month:'short'});
+  $('tfDel').hidden=!tr;$('tfDelOk').hidden=true;$('tfMsg').textContent='';
+  var d=$('dlg');if(d.showModal)d.showModal();else d.setAttribute('open','');
+}
+function closeDlg(){var d=$('dlg');if(d.close)d.close();else d.removeAttribute('open')}
+['tfFromP','tfToP'].forEach(function(id){$(id).addEventListener('change',function(){var p=placeById(this.value);if(p)$(id==='tfFromP'?'tfFromA':'tfToA').value=p.addr})});
+$('tripForm').addEventListener('submit',function(ev){
+  ev.preventDefault();
+  var date=$('tfDate').value,st=$('tfStart').value,en=$('tfEnd').value,so=$('tfSo').value,eo=$('tfEo').value;
+  if(!date||!st||so===''){$('tfMsg').textContent=t('errFields');return}
+  if(eo!==''&&+eo<+so){$('tfMsg').textContent=t('errOdo');return}
+  var start=new Date(date+'T'+st),end=en?new Date(date+'T'+en):null;if(end&&end<start)end.setDate(end.getDate()+1);
+  var mk=function(sel,inp){var p=placeById($(sel).value);return {pid:p?p.id:null,addr:$(inp).value.trim()||(p?p.addr:''),lat:p?p.lat:null,lon:p?p.lon:null}};
+  var id=$('tfId').value,obj={start:start.toISOString(),end:end?end.toISOString():null,so:+so,eo:eo===''?null:+eo,from:mk('tfFromP','tfFromA'),to:mk('tfToP','tfToA'),type:$('tfType').value,detour:+$('tfDetour').value||0,purpose:$('tfPurpose').value.trim(),route:$('tfRoute').value.trim()};
+  if(id){var tr=S.trips.filter(function(x){return x.id===id})[0];for(var k in obj)tr[k]=obj[k];tr.editedAt=new Date().toISOString()}
+  else{obj.id=uid();obj.editedAt=new Date().toISOString();obj.manual=true;S.trips.push(obj)}
+  save();closeDlg();renderAll();flash(t('tripSaved'));
+});
+$('tfCancel').onclick=closeDlg;
+$('tfDel').onclick=function(){$('tfDel').hidden=true;$('tfDelOk').hidden=false};
+$('tfDelOk').onclick=function(){var id=$('tfId').value;S.trips=S.trips.filter(function(x){return x.id!==id});save();closeDlg();renderAll();flash(t('tripDeleted'))};
+
+/* ---------- places form ---------- */
+$('plLookup').onclick=function(){var q=$('plAddr').value.trim();if(!q)return;$('plCoords').textContent='…';forwardGeo(q).then(function(r){if(!r){$('plCoords').textContent=t('lookupFail');return}if(r.none){$('plCoords').textContent=t('notFound');plGeo=null;return}$('plAddr').value=r.addr;plGeo={lat:r.lat,lon:r.lon};$('plCoords').textContent=t('found')+': '+r.addr})};
+$('plHere').onclick=function(){$('plCoords').textContent=t('locating');getPos().then(function(pos){if(!pos){$('plCoords').textContent=t('noGps');return}plGeo={lat:pos.lat,lon:pos.lon};reverseGeo(pos).then(function(a){if(a)$('plAddr').value=a;$('plCoords').textContent=t('coordsOk')+(a?'':' · '+t('lookupFail'))})})};
+$('plCancel').onclick=resetPlaceForm;
+$('placeForm').addEventListener('submit',function(ev){
+  ev.preventDefault();var n=$('plName').value.trim(),a=$('plAddr').value.trim();
+  if(!n||!a){$('plMsg').textContent=t('needName');return}
+  var fin=function(geo){
+    var rec={name:n,addr:a,cat:$('plCat').value,r:+$('plRad').value,lat:geo?geo.lat:null,lon:geo?geo.lon:null};
+    if(editingPlace){var p=placeById(editingPlace);for(var k in rec)p[k]=rec[k]}else{rec.id=uid();S.places.push(rec)}
+    save();flash(t('placeSaved',{n:n}));resetPlaceForm();renderAll();
+  };
+  if(plGeo)fin(plGeo);else forwardGeo(a).then(function(r){fin(r&&!r.none?{lat:r.lat,lon:r.lon}:null)});
+});
+
+/* ---------- export ---------- */
+function inPeriod(x,v){if(v==='all')return true;if(v[0]==='y')return String(new Date(x.start).getFullYear())===v.slice(1);return monthKey(x.start)===v.slice(1)}
+function rows(v){
+  var nl=S.settings.lang==='nl';
+  var head=nl?['Datum','Begintijd','Eindtijd','Kenteken','Beginstand','Eindstand','Km','Vertreklocatie','Vertrekadres','Aankomstlocatie','Aankomstadres','Soort','Woon-werk','Privé omrijden km','Afwijkende route','Doel','Bewerkt op']
+             :['Date','Start time','End time','Licence plate','Start odometer','End odometer','Km','From place','From address','To place','To address','Type','Commute','Private detour km','Route deviation','Purpose','Edited on'];
+  var out=[head];
+  sorted().filter(function(x){return inPeriod(x,v)}).forEach(function(x){var ty=decideType(x);
+    out.push([toLocalDate(x.start),toLocalTime(x.start),x.end?toLocalTime(x.end):'',S.settings.plate||'',x.so,x.eo==null?'':x.eo,km(x)==null?'':km(x),endName(x.from),x.from.addr||'',endName(x.to),x.to.addr||'',t(ty),isCommute(x)?(nl?'ja':'yes'):(nl?'nee':'no'),x.detour||0,x.route||'',x.purpose||'',x.editedAt?toLocalDate(x.editedAt):'']);
+  });
+  return out;
+}
+function csvText(v){var sep=S.settings.lang==='nl'?';':',';return '﻿'+rows(v).map(function(r){return r.map(function(c){c=String(c==null?'':c);return /[";,\n]/.test(c)?'"'+c.replace(/"/g,'""')+'"':c}).join(sep)}).join('\r\n')}
+function fname(ext){var v=$('expPeriod').value;return 'rittenlog_'+(S.settings.plate||'i4').replace(/[^\w-]/g,'')+'_'+(v==='all'?'alles':v.slice(1))+'.'+ext}
+function download(name,blob){var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove()},1500)}
+$('expCsv').onclick=function(){var txt=csvText($('expPeriod').value);if(inFrame){var o=$('expOut');o.value=txt.replace('﻿','');o.hidden=false;o.select();return}download(fname('csv'),new Blob([txt],{type:'text/csv;charset=utf-8'}))};
+$('expXlsx').onclick=function(){
+  if(inFrame||typeof XLSX==='undefined'){$('expCsv').onclick();return}
+  var nl=S.settings.lang==='nl',s=S.settings,v=$('expPeriod').value;
+  var meta=[[nl?'Rittenregistratie':'Trip log'],[t('make'),s.make],[t('model'),s.model],[t('plate'),s.plate],[t('availFrom'),s.from],[t('openingOdo'),s.startOdo],[t('period'),$('expPeriod').selectedOptions[0].textContent],[nl?'Geëxporteerd op':'Exported on',new Date().toLocaleString(loc())],[]];
+  var wb=XLSX.utils.book_new();
+  var ws=XLSX.utils.aoa_to_sheet(meta.concat(rows(v)));ws['!cols']=[10,8,8,10,10,10,6,16,34,16,34,10,9,10,20,24,11].map(function(w){return {wch:w}});
+  XLSX.utils.book_append_sheet(wb,ws,nl?'Ritten':'Trips');
+  var y=new Date().getFullYear(),st=yearStats(y);
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([[nl?'Samenvatting':'Summary',y],[t('statBiz'),st.biz],[t('statPriv'),st.priv],[t('statCommute'),st.commute],[t('statTrips'),st.n],[nl?'Gaten in kilometerstand':'Odometer gaps',gaps().length]]),nl?'Samenvatting':'Summary');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([[t('name'),t('fullAddress'),t('category'),t('radius')+' (m)','lat','lon']].concat(S.places.map(function(p){return [p.name,p.addr,t(p.cat),p.r,p.lat,p.lon]}))),nl?'Locaties':'Places');
+  XLSX.writeFile(wb,fname('xlsx'));
+};
+$('expPrint').onclick=function(){
+  var v=$('expPeriod').value,r=rows(v),s=S.settings,pa=$('printArea');pa.innerHTML='';
+  pa.appendChild(el('h2','',(S.settings.lang==='nl'?'Rittenregistratie ':'Trip log ')+$('expPeriod').selectedOptions[0].textContent));
+  pa.appendChild(el('p','',s.make+' '+s.model+' · '+(s.plate||'')+' · '+t('availFrom')+' '+(s.from||'—')));
+  var tb=el('table'),th=el('thead'),hr=el('tr');[0,1,4,5,6,8,10,11,12,13,15].forEach(function(i){hr.appendChild(el('th','',r[0][i]))});th.appendChild(hr);tb.appendChild(th);
+  var bd=el('tbody');r.slice(1).forEach(function(row){var tr=el('tr');[0,1,4,5,6,8,10,11,12,13,15].forEach(function(i){tr.appendChild(el('td',[4,5,6,13].indexOf(i)>=0?'n':'',row[i]))});bd.appendChild(tr)});tb.appendChild(bd);pa.appendChild(tb);
+  window.print();
+};
+$('bkSave').onclick=function(){var txt=JSON.stringify(S,null,1);S.lastBackup=new Date().toISOString();save();renderExport();if(inFrame){var o=$('expOut');o.value=txt;o.hidden=false;o.select();return}download('rittenlog_backup_'+toLocalDate(S.lastBackup)+'.json',new Blob([txt],{type:'application/json'}))};
+$('bkFile').addEventListener('change',function(){var f=this.files&&this.files[0];if(!f)return;var rd=new FileReader();rd.onload=function(){try{var p=JSON.parse(rd.result);if(!p||p.v!==1||!Array.isArray(p.trips))throw 0;S=p;save();renderAll();$('bkMsg').textContent=t('restored',{n:S.trips.length,p:S.places.length})}catch(e){$('bkMsg').textContent=t('badFile')}};rd.readAsText(f);this.value=''});
+
+/* ---------- settings ---------- */
+$('setForm').addEventListener('submit',function(ev){ev.preventDefault();var s=S.settings;s.make=$('sMake').value.trim();s.model=$('sModel').value.trim();s.plate=$('sPlate').value.trim().toUpperCase();s.from=$('sFrom').value;s.startOdo=$('sOdo').value===''?null:+$('sOdo').value;s.defType=$('sDef').value;save();renderAll();$('setMsg').textContent=t('saved')});
+$('wipe').onclick=function(){$('wipe').hidden=true;$('wipeConfirm').hidden=false};
+$('wipeConfirm').onclick=function(){var lang=S.settings.lang;S=blank();S.settings.lang=lang;S.noDemo=true;save();$('wipe').hidden=false;$('wipeConfirm').hidden=true;renderAll();flash(t('wiped'))};
+$('loadDemo').onclick=function(){loadDemo();renderAll();setTab('today')};
+$('baseUrl').addEventListener('change',renderHelp);
+
+/* ---------- demo data ---------- */
+function loadDemo(){
+  var lang=S.settings.lang;S=blank();S.settings.lang=lang;S.demo=true;
+  S.settings.plate='XX-123-X';S.settings.from='2026-01-01';S.settings.startOdo=41200;
+  var H={id:'home',name:lang==='nl'?'Thuis':'Home',addr:'Voorbeeldstraat 1, 3500 AA Utrecht',cat:'home',r:100,lat:52.0907,lon:5.1214};
+  var A={id:'offA',name:lang==='nl'?'Kantoor A':'Office A',addr:'Voorbeeldlaan 10, 1082 AA Amsterdam',cat:'biz',r:250,lat:52.3383,lon:4.8730};
+  var B={id:'offB',name:lang==='nl'?'Kantoor B':'Office B',addr:'Voorbeeldweg 5, 1119 AA Schiphol-Rijk',cat:'biz',r:250,lat:52.2830,lon:4.7610};
+  var C={id:'club',name:lang==='nl'?'Sportclub':'Sports club',addr:'Sportpark-voorbeeld 2, 3500 AB Utrecht',cat:'priv',r:250,lat:52.0800,lon:5.1400};
+  S.places=[H,A,B,C];
+  var e=function(p){return {pid:p.id,addr:p.addr,lat:p.lat,lon:p.lon}};
+  var odo=48100,now=new Date(),days=[];
+  for(var i=6;i>=0;i--){var d=new Date(now);d.setDate(d.getDate()-i);if(d.getDay()!==0&&d.getDay()!==6||i===0)days.push(d)}
+  var plan=[[H,A,46,'biz','Teamoverleg','Team meeting'],[A,B,15,'biz','Overleg leverancier','Supplier meeting'],[B,H,47,'biz','',''],[H,C,6,'priv','','']];
+  days.forEach(function(d,di){
+    var legs=di===days.length-1?plan.slice(0,1):(di%2?plan:[plan[0],[A,H,46,'biz','','']]);
+    var hr=8;
+    legs.forEach(function(l){var s=new Date(d);s.setHours(hr,5+di*3%40,0,0);var en=new Date(s.getTime()+(20+l[2])*60000);
+      S.trips.push({id:uid(),start:s.toISOString(),end:en.toISOString(),so:odo,eo:odo+l[2],from:e(l[0]),to:e(l[1]),type:l[3],purpose:lang==='nl'?l[4]:l[5],detour:0,route:''});odo+=l[2];hr+=l[1]===H?3:4;if(l[1]===C)hr=19});
+  });
+  save();
+}
+
+/* ---------- wiring ---------- */
+document.querySelectorAll('[data-tab]').forEach(function(b){b.addEventListener('click',function(){setTab(b.getAttribute('data-tab'))})});
+[$('lNL'),$('lEN')].forEach(function(b){b.addEventListener('click',function(){S.settings.lang=b.getAttribute('data-l');save();renderAll()})});
+$('addManual').onclick=$('addManual2').onclick=function(){openTrip(null)};
+$('monthSel').onchange=renderLog;
+document.addEventListener('visibilitychange',function(){if(!document.hidden)renderToday()});
+
+if(inFrame&&!S.noDemo&&!S.trips.length&&!S.places.length)loadDemo();
+var startTab='today';try{startTab=sessionStorage.getItem('i4tab')||'today'}catch(e){}
+renderAll();setTab(startTab);runCommand();cloudInit();
+})();
+</script>
+</body>
+</html>
